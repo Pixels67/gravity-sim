@@ -1,9 +1,10 @@
 use macroquad::prelude::*;
+use gravity_sim::object::*;
 
 #[macroquad::main("Sim")]
 async fn main() {
-    let vert_shader = String::from_utf8(load_file("src/default.vert").await.unwrap()).unwrap();
-    let frag_shader = String::from_utf8(load_file("src/default.frag").await.unwrap()).unwrap();
+    let vert_shader = String::from_utf8(load_file("res/default.vert").await.unwrap()).unwrap();
+    let frag_shader = String::from_utf8(load_file("res/default.frag").await.unwrap()).unwrap();
 
     let shader = ShaderSource::Glsl {
         vertex: vert_shader.as_str(),
@@ -11,6 +12,9 @@ async fn main() {
     };
 
     let material = load_material(shader, MaterialParams::default()).unwrap();
+
+    let mut pool = ObjectPool::new();
+    pool.push(Object::default());
 
     loop {
         clear_background(BLACK);
@@ -24,7 +28,7 @@ async fn main() {
 
         gl_use_material(&material);
 
-        draw_sphere(Vec3::new(0., 0., 0.), 1., None, WHITE);
+        pool.draw_all();
 
         gl_use_default_material();
         set_default_camera();
