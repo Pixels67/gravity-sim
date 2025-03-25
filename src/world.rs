@@ -7,11 +7,13 @@ pub struct World {
     pub grav_const: f32,
     pub cam: Camera3D,
     pub obj_mat: Material,
+    pub update_interval: f32,
+    accumulator: f32,
     objects: ObjectPool,
 }
 
 impl World {
-    pub fn new(grav_const: f32) -> Self {
+    pub fn new(grav_const: f32, update_interval: f32) -> Self {
         let cam = Camera3D {
             position: vec3(15., 10., 0.),
             up: vec3(0., 1., 0.),
@@ -24,7 +26,14 @@ impl World {
             fragment: DEFAULT_FRAG_SHADER,
         };
 
+        let pipeline_params = PipelineParams {
+            depth_write: true,
+            depth_test: Comparison::LessOrEqual,
+            ..Default::default()
+        };
+
         let params = MaterialParams {
+            pipeline_params,
             uniforms: vec![
                 UniformDesc::new("light_pos", UniformType::Float3),
                 UniformDesc::new("ambient_light", UniformType::Float1),
@@ -37,25 +46,19 @@ impl World {
         let obj_mat = load_material(shader, params).unwrap();
         obj_mat.set_uniform("light_pos", vec3(0., 10., 10.));
         obj_mat.set_uniform("ambient_light", 0.3f32);
-        obj_mat.set_uniform("ambient_color", BLACK);
 
         World {
             grav_const,
             cam,
             obj_mat,
+            update_interval,
+            accumulator: 0.,
             objects: ObjectPool::new(),
         }
     }
 
     pub fn add_object(&mut self, object: Object) {
         self.objects.push(object);
-    }
-
-    pub fn get_object(&mut self, id: usize) -> Result<&mut Object, String> {
-        self.objects
-            .iter_mut()
-            .find(|obj| obj.id == id)
-            .ok_or(format!("Object with ID {} not found", id))
     }
 
     pub fn set_light_pos(&mut self, pos: Vec3) {
@@ -67,31 +70,100 @@ impl World {
     }
 
     pub fn update(&mut self, dt: f32) {
-        let mut objects = self.objects.clone();
-        for obj in objects.iter_mut() {
-            obj.add_velocity(self.get_obj_veloc(obj, dt));
+        self.accumulator += dt;
+        while self.accumulator > self.update_interval {
+            let mut objects = self.objects.clone();
+
+            for obj in objects.iter_mut() {
+                obj.add_velocity(self.get_obj_veloc(obj, self.update_interval));
+            }
+
+            for obj in objects.iter_mut() {
+                obj.update_pos();
+            }
+
+            self.objects = objects;
+
+            self.accumulator -= self.update_interval;
         }
 
-        self.objects = objects;
-        self.objects.iter_mut().for_each(|obj| { obj.update_pos(); })
+        self.handle_input();
     }
 
     pub fn draw_all(&self) {
         set_camera(&self.cam);
+
+        draw_grid(
+            1_000,
+            4.,
+            Color {
+                r: 0.8,
+                g: 1.,
+                b: 1.,
+                a: 0.2,
+            },
+            Color {
+                r: 0.5,
+                g: 1.,
+                b: 1.,
+                a: 0.1,
+            },
+        );
+
         self.objects.draw_all(&self.obj_mat);
-        set_camera(&self.cam);
+
+        #[cfg(debug_assertions)]
+        for obj in self.objects.iter() {
+            draw_line_3d(
+                obj.position,
+                obj.position + self.get_obj_veloc(obj, get_frame_time() * 1_000.),
+                MAGENTA,
+            );
+        }
+
+        set_default_camera();
     }
 
     fn get_obj_veloc(&self, object: &Object, dt: f32) -> Vec3 {
         let mut veloc: Vec3 = Vec3::default();
 
         for other in self.objects.iter() {
+            if object == other {
+                continue;
+            }
             let dist = other.position - object.position;
             let force = physics::get_grav_force(self.grav_const, object.mass, other.mass, dist);
             veloc += physics::get_veloc(force, object.mass, dt);
         }
 
         veloc
+    }
+
+    fn handle_input(&mut self) {
+        if get_keys_down().contains(&KeyCode::W) {
+            self.cam.position.x -= 0.4;
+            self.cam.target.x   -= 0.4;
+        }
+        if get_keys_down().contains(&KeyCode::S) {
+            self.cam.position.x += 0.4;
+            self.cam.target.x   += 0.4;
+        }
+        if get_keys_down().contains(&KeyCode::LeftControl) {
+            self.cam.position.y -= 0.4;
+            self.cam.target.y   -= 0.4;
+        }
+        if get_keys_down().contains(&KeyCode::LeftShift) {
+            self.cam.position.y += 0.4;
+            self.cam.target.y   += 0.4;
+        }
+        if get_keys_down().contains(&KeyCode::D) {
+            self.cam.position.z -= 0.4;
+            self.cam.target.z   -= 0.4;
+        }
+        if get_keys_down().contains(&KeyCode::A) {
+            self.cam.position.z += 0.4;
+            self.cam.target.z   += 0.4;
+        }
     }
 }
 

@@ -8,3 +8,4 @@ git clone https://github.com/Pixels67/gravity-sim.git
 cd gravity-sim
 cargo build --release
 ```
+***Note***: To get debug lines build with `--dev`

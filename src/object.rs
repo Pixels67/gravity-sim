@@ -1,5 +1,6 @@
 use macroquad::prelude::*;
 
+#[derive(PartialEq)]
 pub struct Object {
     pub id: usize,
     pub position: Vec3,
@@ -72,6 +73,32 @@ impl Object {
         draw_sphere(self.position, self.radius, None, self.color);
 
         gl_use_default_material();
+
+        #[cfg(debug_assertions)]
+        draw_line_3d(self.position, self.position + (self.velocity * 100.), GREEN);
+
+        draw_line_3d(
+            self.position,
+            vec3(self.position.x, 0., self.position.z),
+            Color {
+                r: 1.,
+                g: 1.,
+                b: 1.,
+                a: 0.5,
+            },
+        );
+
+        draw_sphere(
+            vec3(self.position.x, 0., self.position.z),
+            0.05,
+            None,
+            Color {
+                r: 1.,
+                g: 1.,
+                b: 1.,
+                a: 0.5,
+            },
+        );
     }
 }
 
@@ -83,7 +110,16 @@ impl Default for Object {
 
 impl Clone for Object {
     fn clone(&self) -> Self {
-        Object::new(self.position, self.velocity, self.mass, self.radius, self.color)
+        let mut obj = Object::new(
+            self.position,
+            self.velocity,
+            self.mass,
+            self.radius,
+            self.color,
+        );
+
+        obj.id = self.id;
+        obj
     }
 }
 
@@ -131,6 +167,9 @@ impl Clone for ObjectPool {
             vec.push(obj.clone());
         }
 
-        ObjectPool{ objects: vec, current_id: self.current_id }
+        ObjectPool {
+            objects: vec,
+            current_id: self.current_id,
+        }
     }
 }

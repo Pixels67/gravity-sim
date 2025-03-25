@@ -8,9 +8,11 @@ pub fn get_grav_force(grav_const: f32, m1: f32, m2: f32, dist: Vec3) -> Vec3 {
 }
 
 pub fn get_veloc(force: Vec3, mass: f32, time: f32) -> Vec3 {
+    if mass == 0. || time == 0. { return Vec3::ZERO; }
     force / mass * time
 }
 
 pub fn get_displ(force: Vec3, mass: f32, time: f32) -> Vec3 {
+    if mass == 0. || time == 0. { return Vec3::ZERO; }
     force / mass * time * time
 }
