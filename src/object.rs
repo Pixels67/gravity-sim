@@ -1,34 +1,34 @@
 use macroquad::prelude::*;
 
 pub struct Object {
-    id: u32,
-    position: Vec3,
-    mass: f32,
-    radius: f32,
-    color: Color,
-}
-
-pub struct ObjectPool {
-    objects: Vec<Object>,
-    current_id: u32,
+    pub id: usize,
+    pub position: Vec3,
+    pub velocity: Vec3,
+    pub mass: f32,
+    pub radius: f32,
+    pub color: Color,
 }
 
 impl Object {
-    pub fn new(id: u32, position: Vec3, mass: f32, radius: f32, color: Color) -> Self {
+    pub fn new(position: Vec3, velocity: Vec3, mass: f32, radius: f32, color: Color) -> Self {
         Object {
-            id,
+            id: 0,
             position,
+            velocity,
             mass,
             radius,
             color,
         }
     }
 
-    pub fn clone_with_id(&self, id: u32) -> Self {
-        Object {
-            id,
-            ..*self
-        }
+    pub fn new_with_pos(position: Vec3) -> Self {
+        let mut obj = Object::default();
+        obj.position = position;
+        obj
+    }
+
+    pub fn clone_with_id(&self, id: usize) -> Self {
+        Object { id, ..*self }
     }
 
     // Getters
@@ -48,15 +48,48 @@ impl Object {
         self.color
     }
 
-    pub fn draw(&self) {
+    pub fn translate(&mut self, translation: Vec3) -> &mut Self {
+        self.position += translation;
+        self
+    }
+
+    pub fn add_velocity(&mut self, velocity: Vec3) -> &mut Self {
+        self.velocity += velocity;
+        self
+    }
+
+    pub fn update_pos(&mut self) -> &mut Self {
+        self.position += self.velocity;
+        self
+    }
+
+    pub fn draw(&self, material: &Material) {
+        gl_use_material(&material);
+
+        material.set_uniform("color", self.color);
+        material.set_uniform("world_pos", self.position);
+
         draw_sphere(self.position, self.radius, None, self.color);
+
+        gl_use_default_material();
     }
 }
 
 impl Default for Object {
     fn default() -> Self {
-        Object::new(0, Vec3::default(), 1., 1., WHITE)
+        Object::new(Vec3::ZERO, Vec3::ZERO, 1., 1., WHITE)
     }
+}
+
+impl Clone for Object {
+    fn clone(&self) -> Self {
+        Object::new(self.position, self.velocity, self.mass, self.radius, self.color)
+    }
+}
+
+pub struct ObjectPool {
+    objects: Vec<Object>,
+    current_id: usize,
 }
 
 impl ObjectPool {
@@ -76,9 +109,28 @@ impl ObjectPool {
         self.objects.pop()
     }
 
-    pub fn draw_all(&self) {
+    pub fn iter(&self) -> impl Iterator<Item = &Object> {
+        self.objects.iter()
+    }
+
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut Object> {
+        self.objects.iter_mut()
+    }
+
+    pub fn draw_all(&self, material: &Material) {
         for obj in &self.objects {
-            obj.draw();
+            obj.draw(material);
         }
+    }
+}
+
+impl Clone for ObjectPool {
+    fn clone(&self) -> Self {
+        let mut vec = Vec::default();
+        for obj in &self.objects {
+            vec.push(obj.clone());
+        }
+
+        ObjectPool{ objects: vec, current_id: self.current_id }
     }
 }

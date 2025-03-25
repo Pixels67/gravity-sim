@@ -1,50 +1,23 @@
 use macroquad::prelude::*;
 use gravity_sim::object::*;
+use gravity_sim::world::*;
+
+const BG_COLOR: Color = Color{r: 0.05, g: 0.05, b: 0.05, a: 1.};
+const GRAV_CONST: f32 = 1.;
 
 #[macroquad::main("Sim")]
 async fn main() {
-    let vert_shader = String::from_utf8(load_file("res/default.vert").await.unwrap()).unwrap();
-    let frag_shader = String::from_utf8(load_file("res/default.frag").await.unwrap()).unwrap();
+    let mut world = World::new(GRAV_CONST);
 
-    let shader = ShaderSource::Glsl {
-        vertex: vert_shader.as_str(),
-        fragment: frag_shader.as_str(),
-    };
-
-    let params = MaterialParams {
-        uniforms: vec![
-            UniformDesc::new("light_pos", UniformType::Float3),
-            UniformDesc::new("color", UniformType::Float4),
-            UniformDesc::new("ambient_light", UniformType::Float1),
-        ],
-        ..Default::default()
-    };
-
-    let material = load_material(shader, params).unwrap();
-    material.set_uniform("light_pos", vec3(0., 10., 10.));
-    material.set_uniform("ambient_light", 0.15f32);
-
-    let mut pool = ObjectPool::new();
-    pool.push(Object::default());
+    world.add_object(Object::new(vec3( 5., 0., 0.), vec3(0., 0.,  0.025), 1., 0.5, RED));
+    world.add_object(Object::new(vec3(-5., 0., 0.), vec3(0., 0., -0.025), 1., 0.5, BLUE));
 
     loop {
-        clear_background(BLACK);
+        clear_background(BG_COLOR);
 
-        set_camera(&Camera3D {
-            position: vec3(15., 10., 0.),
-            up: vec3(0., 1., 0.),
-            target: vec3(0., 0., 0.),
-            ..Default::default()
-        });
+        world.update(get_frame_time());
+        world.draw_all();
 
-        gl_use_material(&material);
-
-        material.set_uniform("color", vec4(1., 1., 1., 1.));
-
-        pool.draw_all();
-
-        gl_use_default_material();
-        set_default_camera();
         next_frame().await
     }
 }
