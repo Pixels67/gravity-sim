@@ -1,6 +1,7 @@
 pub mod object;
 pub mod world;
 pub mod physics;
+pub mod screen;
 
 #[cfg(test)]
 mod tests {
@@ -104,5 +105,25 @@ mod tests {
         let new = original.clone();
 
         assert_eq!(new, original);
+    }
+
+    use crate::screen::*;
+
+    #[test]
+    fn raycast() {
+        let ray = Ray::new(vec3(0., 0., 0.), vec3(1., 0., 0.), 10.);
+        let pos = vec3(5., 0., 0.);
+
+        assert!(ray.raycast(pos, 0.));
+
+        let ray = Ray::new(vec3(0., 0., 0.), vec3(1., 0., 0.), 10.);
+        let pos = vec3(5., 1., 0.);
+
+        assert!(ray.raycast(pos, 1.));
+
+        let ray = Ray::new(vec3(0., 0., 0.), vec3(1., 0., 0.), 10.);
+        let pos = vec3(5., 2., 0.);
+
+        assert!(!ray.raycast(pos, 1.));
     }
 }

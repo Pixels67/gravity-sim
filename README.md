@@ -9,3 +9,7 @@ cd gravity-sim
 cargo build --release
 ```
 ***Note***: To get debug lines build with `--dev`
+## Controls
+**[A]** / **[D]**: Left / Right \
+**[W]** / **[S]**: Forward / Back \
+**[LShift]** / **[LCtrl]**: Up / Down

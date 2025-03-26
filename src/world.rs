@@ -1,7 +1,8 @@
-use super::object::*;
-use super::physics;
+use crate::object::*;
+use crate::physics;
 use macroquad::prelude::*;
 use std::vec;
+use crate::screen::{get_mouse_pos, Ray};
 
 pub struct World {
     pub grav_const: f32,
@@ -15,7 +16,7 @@ pub struct World {
 impl World {
     pub fn new(grav_const: f32, update_interval: f32) -> Self {
         let cam = Camera3D {
-            position: vec3(15., 10., 0.),
+            position: vec3(0., 10., -15.),
             up: vec3(0., 1., 0.),
             target: vec3(0., 0., 0.),
             ..Default::default()
@@ -44,8 +45,8 @@ impl World {
         };
 
         let obj_mat = load_material(shader, params).unwrap();
-        obj_mat.set_uniform("light_pos", vec3(0., 10., 10.));
-        obj_mat.set_uniform("ambient_light", 0.3f32);
+        obj_mat.set_uniform("light_pos", Vec3::ONE);
+        obj_mat.set_uniform("ambient_light", 0.25f32);
 
         World {
             grav_const,
@@ -112,6 +113,14 @@ impl World {
 
         self.objects.draw_all(&self.obj_mat);
 
+        let ray = Ray::new_from_cam(&self.cam, get_mouse_pos(), 100.);
+
+        for obj in self.objects.iter() {
+            if ray.raycast(obj.position, 0.5) {
+                draw_sphere(obj.position, 0.5, None, WHITE);
+            }
+        }
+
         #[cfg(debug_assertions)]
         for obj in self.objects.iter() {
             draw_line_3d(
@@ -141,28 +150,28 @@ impl World {
 
     fn handle_input(&mut self) {
         if get_keys_down().contains(&KeyCode::W) {
-            self.cam.position.x -= 0.4;
-            self.cam.target.x   -= 0.4;
+            self.cam.position.z += 0.4;
+            self.cam.target.z += 0.4;
         }
         if get_keys_down().contains(&KeyCode::S) {
-            self.cam.position.x += 0.4;
-            self.cam.target.x   += 0.4;
+            self.cam.position.z -= 0.4;
+            self.cam.target.z -= 0.4;
         }
         if get_keys_down().contains(&KeyCode::LeftControl) {
             self.cam.position.y -= 0.4;
-            self.cam.target.y   -= 0.4;
+            self.cam.target.y -= 0.4;
         }
         if get_keys_down().contains(&KeyCode::LeftShift) {
             self.cam.position.y += 0.4;
-            self.cam.target.y   += 0.4;
+            self.cam.target.y += 0.4;
         }
         if get_keys_down().contains(&KeyCode::D) {
-            self.cam.position.z -= 0.4;
-            self.cam.target.z   -= 0.4;
+            self.cam.position.x -= 0.4;
+            self.cam.target.x -= 0.4;
         }
         if get_keys_down().contains(&KeyCode::A) {
-            self.cam.position.z += 0.4;
-            self.cam.target.z   += 0.4;
+            self.cam.position.x += 0.4;
+            self.cam.target.x += 0.4;
         }
     }
 }
