@@ -1,6 +1,6 @@
 use macroquad::prelude::*;
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 pub struct Object {
     pub id: usize,
     pub position: Vec3,
@@ -30,23 +30,6 @@ impl Object {
 
     pub fn clone_with_id(&self, id: usize) -> Self {
         Object { id, ..*self }
-    }
-
-    // Getters
-    pub fn get_position(&self) -> Vec3 {
-        self.position
-    }
-
-    pub fn get_mass(&self) -> f32 {
-        self.mass
-    }
-
-    pub fn get_radius(&self) -> f32 {
-        self.radius
-    }
-
-    pub fn get_color(&self) -> Color {
-        self.color
     }
 
     pub fn translate(&mut self, translation: Vec3) -> &mut Self {
