@@ -1,17 +1,23 @@
 pub mod object;
-pub mod world;
 pub mod physics;
 pub mod screen;
+pub mod world;
 
 #[cfg(test)]
 mod tests {
-    use macroquad::prelude::*;
     use crate::physics::*;
+    use macroquad::prelude::*;
 
     #[test]
     fn physics_get_grav_force() {
-        assert_eq!(get_grav_force(1., 1., 1., vec3(1., 0. ,0.)), vec3(1., 0., 0.));
-        assert_eq!(get_grav_force(1., 2., 3., vec3(2., 0. ,0.)), vec3(1.5, 0., 0.));
+        assert_eq!(
+            get_grav_force(1., 1., 1., vec3(1., 0., 0.)),
+            vec3(1., 0., 0.)
+        );
+        assert_eq!(
+            get_grav_force(1., 2., 3., vec3(2., 0., 0.)),
+            vec3(1.5, 0., 0.)
+        );
         assert_eq!(get_grav_force(1., 1., 1., Vec3::ZERO), Vec3::ZERO);
     }
 

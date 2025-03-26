@@ -1,8 +1,9 @@
 use crate::object::*;
 use crate::physics;
+use crate::screen::*;
 use macroquad::prelude::*;
+use ::rand::*;
 use std::vec;
-use crate::screen::{get_mouse_pos, Ray};
 
 pub struct World {
     pub grav_const: f32,
@@ -11,6 +12,8 @@ pub struct World {
     pub update_interval: f32,
     accumulator: f32,
     objects: ObjectPool,
+    control_state: ControlState,
+    new_planet_pos: Vec3,
 }
 
 impl World {
@@ -55,6 +58,8 @@ impl World {
             update_interval,
             accumulator: 0.,
             objects: ObjectPool::new(),
+            control_state: ControlState::Idle,
+            new_planet_pos: Vec3::ZERO,
         }
     }
 
@@ -113,11 +118,17 @@ impl World {
 
         self.objects.draw_all(&self.obj_mat);
 
-        let ray = Ray::new_from_cam(&self.cam, get_mouse_pos(), 100.);
+        let ray = Ray::new_from_mouse(&self.cam, 100.);
 
         for obj in self.objects.iter() {
             if ray.raycast(obj.position, 0.5) {
-                draw_sphere(obj.position, 0.5, None, WHITE);
+                let color = Color {
+                    r: obj.color.r,
+                    g: obj.color.g,
+                    b: obj.color.b,
+                    a: 0.2,
+                };
+                draw_sphere(obj.position, 0.5, None, color);
             }
         }
 
@@ -149,6 +160,106 @@ impl World {
     }
 
     fn handle_input(&mut self) {
+        self.handle_movement();
+
+        self.control_state = match self.control_state {
+            ControlState::Idle => self.handle_idle(),
+            ControlState::Place => self.handle_place(),
+            ControlState::Drag => self.handle_drag(),
+        };
+    }
+
+    fn handle_idle(&mut self) -> ControlState {
+        if is_mouse_button_pressed(MouseButton::Left) {
+            return ControlState::Place;
+        }
+
+        if is_mouse_button_released(MouseButton::Right) {
+            let ray = Ray::new_from_mouse(&self.cam, 100.);
+            for obj in self.objects.clone().iter() {
+                if !ray.raycast(obj.position, 0.5) {
+                    continue;
+                }
+                self.objects.remove(obj.id);
+                break;
+            }
+        }
+
+        ControlState::Idle
+    }
+
+    fn handle_place(&mut self) -> ControlState {
+        let ray = Ray::new_from_mouse(&self.cam, 15.);
+
+        set_camera(&self.cam);
+        gl_use_material(&self.obj_mat);
+
+        self.obj_mat.set_uniform("color", WHITE);
+        self.obj_mat.set_uniform("world_pos", ray.grid_intersect());
+
+        draw_sphere(ray.grid_intersect(), 0.5, None, WHITE);
+
+        gl_use_default_material();
+        set_default_camera();
+
+        if is_mouse_button_released(MouseButton::Left) {
+            self.new_planet_pos = ray.grid_intersect();
+            return ControlState::Drag;
+        }
+
+        if is_mouse_button_released(MouseButton::Right) {
+            return ControlState::Idle;
+        }
+
+        ControlState::Place
+    }
+
+    fn handle_drag(&mut self) -> ControlState {
+        let ray = Ray::new_from_mouse(&self.cam, 15.);
+
+        set_camera(&self.cam);
+        gl_use_material(&self.obj_mat);
+
+        self.obj_mat.set_uniform("color", WHITE);
+        self.obj_mat.set_uniform("world_pos", self.new_planet_pos);
+
+        draw_sphere(self.new_planet_pos, 0.5, None, WHITE);
+
+        gl_use_default_material();
+
+        draw_line_3d(self.new_planet_pos, ray.grid_intersect(), WHITE);
+
+        set_default_camera();
+
+        if is_mouse_button_pressed(MouseButton::Left) {
+            let mut rng = rng();
+
+            let color = Color {
+                r: rng.random_range(0f32..1f32),
+                g: rng.random_range(0f32..1f32),
+                b: rng.random_range(0f32..1f32),
+                a: 1.,
+            };
+
+            self.add_object(Object::new(
+                self.new_planet_pos,
+                (ray.grid_intersect() - self.new_planet_pos) / 500.,
+                1.,
+                0.5,
+                color,
+            ));
+
+            return ControlState::Idle;
+        }
+
+        if is_mouse_button_released(MouseButton::Right) {
+            return ControlState::Idle;
+        }
+
+        ControlState::Drag
+    }
+
+    fn handle_movement(&mut self) {
         if get_keys_down().contains(&KeyCode::W) {
             self.cam.position.z += 0.4;
             self.cam.target.z += 0.4;
@@ -174,6 +285,13 @@ impl World {
             self.cam.target.x += 0.4;
         }
     }
+}
+
+#[derive(Debug)]
+enum ControlState {
+    Idle,
+    Place,
+    Drag,
 }
 
 const DEFAULT_VERT_SHADER: &str = "#version 100

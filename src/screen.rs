@@ -41,6 +41,10 @@ impl Ray {
         }
     }
 
+    pub fn new_from_mouse(cam: &Camera3D, len: f32) -> Self {
+        Self::new_from_cam(cam, get_mouse_pos(), len)
+    }
+
     pub fn raycast(&self, target_pos: Vec3, margin_of_err: f32) -> bool {
         if self.dir == Vec3::ZERO {
             return false;
@@ -59,6 +63,18 @@ impl Ray {
         let closest_point = target_pos + mirror_target;
 
         (closest_point - target_pos).length() <= margin_of_err
+    }
+
+    pub fn end(&self) -> Vec3 {
+        self.origin + self.dir * self.len
+    }
+
+    pub fn grid_intersect(&self) -> Vec3 {
+        if self.dir.y >= 0. {
+            return Vec3::ZERO;
+        }
+
+        self.origin + (self.origin.y / self.dir.y.abs()) * self.dir
     }
 
     #[cfg(debug_assertions)]

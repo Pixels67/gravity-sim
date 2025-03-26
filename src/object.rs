@@ -128,6 +128,16 @@ impl ObjectPool {
         self.objects.pop()
     }
 
+    pub fn remove(&mut self, id: usize) {
+        for i in 0..self.objects.len() {
+            if self.objects[i].id != id {
+                continue;
+            }
+            self.objects.swap_remove(i);
+            return;
+        }
+    }
+
     pub fn iter(&self) -> impl Iterator<Item = &Object> {
         self.objects.iter()
     }
