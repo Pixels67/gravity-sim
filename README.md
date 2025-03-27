@@ -27,7 +27,7 @@ cargo build --release
 
 **[LMB]** To enter object creation mode or if in object creation mode go into drag mode \
 **[ESC]** To return to idle/default mode \
-**[RMB]** On an object to remove it \
+**[R]** On an object to remove it \
 **[E]** To raise placement or velocity line elevation \
 **[Q]** To lower placement or velocity line elevation \
 **[UP]** To increase placed object mass \

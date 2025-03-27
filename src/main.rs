@@ -5,7 +5,7 @@ use macroquad::prelude::*;
 const WINDOW_TITLE: &str = "Gravity Sim";
 const WINDOW_WIDTH: i32 = 1280;
 const WINDOW_HEIGHT: i32 = 720;
-const AA_SAMPLE_COUNT: i32 = 8;
+const AA_SAMPLE_COUNT: i32 = 4;
 
 const GRAV_CONST: f32 = 0.5;
 const UPDATE_INTERVAL: f32 = 0.01;

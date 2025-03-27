@@ -2,7 +2,7 @@ use crate::object::*;
 use crate::physics;
 use crate::screen::*;
 use macroquad::prelude::*;
-use ::rand::*;
+use macroquad::rand;
 use std::cmp::PartialEq;
 use std::vec;
 
@@ -161,6 +161,7 @@ impl World {
                 };
 
                 draw_sphere(obj.position, obj.radius, None, color);
+                self.draw_obj_path(&mut obj.clone(), 100000, self.update_interval);
             }
         }
 
@@ -252,7 +253,7 @@ impl World {
             return ControlState::Place;
         }
 
-        if is_mouse_button_released(MouseButton::Right) {
+        if is_key_released(KeyCode::R) {
             let ray = Ray::new_from_mouse(&self.cam, 100.);
             for obj in self.objects.clone().iter() {
                 if !ray.raycast(obj.position, obj.radius) {
@@ -316,12 +317,10 @@ impl World {
         set_default_camera();
 
         if is_mouse_button_pressed(MouseButton::Left) {
-            let mut rng = rng();
-
             let color = Color {
-                r: rng.random_range(0f32..1f32),
-                g: rng.random_range(0f32..1f32),
-                b: rng.random_range(0f32..1f32),
+                r: rand::gen_range(0f32, 1f32),
+                g: rand::gen_range(0f32, 1f32),
+                b: rand::gen_range(0f32, 1f32),
                 a: 1.,
             };
 
@@ -404,7 +403,7 @@ impl World {
                 pos = obj.unwrap().position;
             }
 
-            if (pos - initial_pos).length() > 500. {
+            if (pos - initial_pos).length() > 1000. {
                 break;
             }
         }
