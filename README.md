@@ -13,13 +13,22 @@ cd gravity-sim
 cargo build --release
 ```
 
-***Note***: To get debug lines build with `--dev`
+***Note***: To get debug lines build without `--release`
 
 ## Controls
+
+### Movement
 
 **[A]** / **[D]**: Left / Right \
 **[W]** / **[S]**: Forward / Back \
 **[LShift]** / **[LCtrl]**: Up / Down
 
+### Spawn / Destroy Objects
+
 **[LMB]** To enter object creation mode or if in object creation mode go into drag mode \
-**[RMB]** To return to idle/default mode
+**[ESC]** To return to idle/default mode \
+**[RMB]** On an object to remove it \
+**[E]** To raise placement or velocity line elevation \
+**[Q]** To lower placement or velocity line elevation
+**[UP]** To increase placed object mass
+**[DOWN]** To decrease placed object mass

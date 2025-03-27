@@ -3,6 +3,7 @@ use crate::physics;
 use crate::screen::*;
 use macroquad::prelude::*;
 use ::rand::*;
+use std::cmp::PartialEq;
 use std::vec;
 
 pub struct World {
@@ -14,6 +15,9 @@ pub struct World {
     objects: ObjectPool,
     control_state: ControlState,
     new_planet_pos: Vec3,
+    place_elevation: f32,
+    ghost_obj_id: usize,
+    current_obj_mass: f32,
 }
 
 impl World {
@@ -60,11 +64,14 @@ impl World {
             objects: ObjectPool::new(),
             control_state: ControlState::Idle,
             new_planet_pos: Vec3::ZERO,
+            place_elevation: 0.,
+            ghost_obj_id: 0,
+            current_obj_mass: 1.,
         }
     }
 
-    pub fn add_object(&mut self, object: Object) {
-        self.objects.push(object);
+    pub fn add_object(&mut self, object: Object) -> usize {
+        self.objects.push(object)
     }
 
     pub fn set_light_pos(&mut self, pos: Vec3) {
@@ -128,7 +135,8 @@ impl World {
                     b: obj.color.b,
                     a: 0.2,
                 };
-                draw_sphere(obj.position, 0.5, None, color);
+
+                draw_sphere(obj.position, obj.radius, None, color);
             }
         }
 
@@ -161,6 +169,7 @@ impl World {
 
     fn handle_input(&mut self) {
         self.handle_movement();
+        self.handle_ghost_obj();
 
         self.control_state = match self.control_state {
             ControlState::Idle => self.handle_idle(),
@@ -174,7 +183,7 @@ impl World {
             return ControlState::Place;
         }
 
-        if is_mouse_button_released(MouseButton::Right) {
+        if is_key_released(KeyCode::Escape) {
             let ray = Ray::new_from_mouse(&self.cam, 100.);
             for obj in self.objects.clone().iter() {
                 if !ray.raycast(obj.position, 0.5) {
@@ -191,23 +200,23 @@ impl World {
     fn handle_place(&mut self) -> ControlState {
         let ray = Ray::new_from_mouse(&self.cam, 15.);
 
-        set_camera(&self.cam);
-        gl_use_material(&self.obj_mat);
-
-        self.obj_mat.set_uniform("color", WHITE);
-        self.obj_mat.set_uniform("world_pos", ray.grid_intersect());
-
-        draw_sphere(ray.grid_intersect(), 0.5, None, WHITE);
-
-        gl_use_default_material();
-        set_default_camera();
+        self.objects.remove(self.ghost_obj_id);
+        self.ghost_obj_id = self.add_object(Object::new(
+            ray.grid_intersect().with_y(self.place_elevation),
+            Vec3::ZERO,
+            0.,
+            self.current_obj_mass / 2.,
+            WHITE,
+        ));
 
         if is_mouse_button_released(MouseButton::Left) {
-            self.new_planet_pos = ray.grid_intersect();
+            self.new_planet_pos = ray.grid_intersect().with_y(self.place_elevation);
             return ControlState::Drag;
         }
 
-        if is_mouse_button_released(MouseButton::Right) {
+        if is_key_released(KeyCode::Escape) {
+            self.objects.remove(self.ghost_obj_id);
+            self.ghost_obj_id = 0;
             return ControlState::Idle;
         }
 
@@ -218,16 +227,12 @@ impl World {
         let ray = Ray::new_from_mouse(&self.cam, 15.);
 
         set_camera(&self.cam);
-        gl_use_material(&self.obj_mat);
 
-        self.obj_mat.set_uniform("color", WHITE);
-        self.obj_mat.set_uniform("world_pos", self.new_planet_pos);
-
-        draw_sphere(self.new_planet_pos, 0.5, None, WHITE);
-
-        gl_use_default_material();
-
-        draw_line_3d(self.new_planet_pos, ray.grid_intersect(), WHITE);
+        draw_line_3d(
+            self.new_planet_pos,
+            ray.grid_intersect().with_y(self.place_elevation),
+            WHITE,
+        );
 
         set_default_camera();
 
@@ -241,18 +246,23 @@ impl World {
                 a: 1.,
             };
 
+            self.objects.remove(self.ghost_obj_id);
+            self.ghost_obj_id = 0;
+
             self.add_object(Object::new(
                 self.new_planet_pos,
-                (ray.grid_intersect() - self.new_planet_pos) / 500.,
-                1.,
-                0.5,
+                (ray.grid_intersect().with_y(self.place_elevation) - self.new_planet_pos) / 500.,
+                self.current_obj_mass,
+                self.current_obj_mass / 2.,
                 color,
             ));
 
             return ControlState::Idle;
         }
 
-        if is_mouse_button_released(MouseButton::Right) {
+        if is_key_released(KeyCode::Escape) {
+            self.objects.remove(self.ghost_obj_id);
+            self.ghost_obj_id = 0;
             return ControlState::Idle;
         }
 
@@ -285,9 +295,34 @@ impl World {
             self.cam.target.x += 0.4;
         }
     }
+
+    fn handle_ghost_obj(&mut self) {
+        if is_key_down(KeyCode::E) {
+            self.place_elevation += 0.1;
+        }
+        if is_key_down(KeyCode::Q) {
+            self.place_elevation -= 0.1;
+        }
+
+        if is_key_down(KeyCode::Up) {
+            self.current_obj_mass += 0.1;
+        }
+        if is_key_down(KeyCode::Down) && self.current_obj_mass > 0.1 {
+            self.current_obj_mass -= 0.1;
+        }
+
+        if self.ghost_obj_id != 0 {
+            let obj: &mut Object = self
+                .objects
+                .iter_mut()
+                .find(|obj| obj.id == self.ghost_obj_id)
+                .unwrap();
+            obj.radius = self.current_obj_mass / 2.
+        }
+    }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum ControlState {
     Idle,
     Place,

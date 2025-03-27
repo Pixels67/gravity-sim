@@ -28,6 +28,13 @@ mod tests {
         assert_eq!(get_veloc(vec3(1., 0., 2.), 2., 1.), vec3(0.5, 0., 1.));
     }
 
+    #[test]
+    fn physics_get_displ() {
+        assert_eq!(get_displ(Vec3::ONE, 1., 1.), Vec3::ONE);
+        assert_eq!(get_displ(Vec3::ZERO, 1., 1.), Vec3::ZERO);
+        assert_eq!(get_displ(vec3(1., 0., 2.), 2., 1.), vec3(0.5, 0., 1.));
+    }
+
     use crate::object::*;
 
     #[test]

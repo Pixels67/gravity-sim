@@ -119,9 +119,10 @@ impl ObjectPool {
         }
     }
 
-    pub fn push(&mut self, object: Object) {
+    pub fn push(&mut self, object: Object) -> usize {
         self.current_id += 1;
         self.objects.push(object.clone_with_id(self.current_id));
+        self.current_id
     }
 
     pub fn pop(&mut self) -> Option<Object> {
