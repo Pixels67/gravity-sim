@@ -29,6 +29,6 @@ cargo build --release
 **[ESC]** To return to idle/default mode \
 **[RMB]** On an object to remove it \
 **[E]** To raise placement or velocity line elevation \
-**[Q]** To lower placement or velocity line elevation
-**[UP]** To increase placed object mass
+**[Q]** To lower placement or velocity line elevation \
+**[UP]** To increase placed object mass \
 **[DOWN]** To decrease placed object mass
