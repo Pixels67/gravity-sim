@@ -14,16 +14,15 @@ pub fn get_aspect_ratio() -> f32 {
 pub struct Ray {
     pub origin: Vec3,
     pub dir: Vec3,
-    pub len: f32,
 }
 
 impl Ray {
-    pub fn new(origin: Vec3, dir: Vec3, len: f32) -> Self {
+    pub fn new(origin: Vec3, dir: Vec3) -> Self {
         let dir = dir.normalize();
-        Self { origin, dir, len }
+        Self { origin, dir }
     }
 
-    pub fn new_from_cam(cam: &Camera3D, pos: Vec2, len: f32) -> Self {
+    pub fn new_from_cam(cam: &Camera3D, pos: Vec2) -> Self {
         let cam_forward = (cam.target - cam.position).normalize();
         let cam_right = Vec3::cross(cam_forward, cam.up).normalize();
         let cam_up = Vec3::cross(cam_right, cam_forward).normalize();
@@ -37,12 +36,11 @@ impl Ray {
         Self {
             origin: cam.position,
             dir,
-            len,
         }
     }
 
-    pub fn new_from_mouse(cam: &Camera3D, len: f32) -> Self {
-        Self::new_from_cam(cam, get_mouse_pos(), len)
+    pub fn new_from_mouse(cam: &Camera3D) -> Self {
+        Self::new_from_cam(cam, get_mouse_pos())
     }
 
     pub fn raycast(&self, target_pos: Vec3, margin_of_err: f32) -> bool {
@@ -65,13 +63,13 @@ impl Ray {
         (closest_point - target_pos).length() <= margin_of_err
     }
 
-    pub fn end(&self) -> Vec3 {
-        self.origin + self.dir * self.len
-    }
-
-    pub fn grid_intersect(&self) -> Vec3 {
+    pub fn plane_intersect(&self, y: Option<f32>) -> Vec3 {
         if self.dir.y >= 0. {
             return Vec3::ZERO;
+        }
+
+        if let Some(y) = y {
+            return (self.origin + (self.origin.y / self.dir.y.abs()) * self.dir).with_y(y);
         }
 
         self.origin + (self.origin.y / self.dir.y.abs()) * self.dir
@@ -79,6 +77,6 @@ impl Ray {
 
     #[cfg(debug_assertions)]
     pub fn draw(&self, color: Color) {
-        draw_line_3d(self.origin, self.origin + self.dir * self.len, color);
+        draw_line_3d(self.origin, self.origin + self.dir * 10_000.0, color);
     }
 }

@@ -7,8 +7,6 @@ const WINDOW_WIDTH: i32 = 1280;
 const WINDOW_HEIGHT: i32 = 720;
 const AA_SAMPLE_COUNT: i32 = 4;
 
-const GRAV_CONST: f32 = 0.5;
-const UPDATE_INTERVAL: f32 = 0.01;
 const BG_COLOR: Color = Color {
     r: 0.06,
     g: 0.08,
@@ -18,22 +16,14 @@ const BG_COLOR: Color = Color {
 
 #[macroquad::main(config)]
 async fn main() {
-    let mut world = World::new(GRAV_CONST, UPDATE_INTERVAL);
-
-    world.add_object(Object::new(
-        vec3(0., 0., 0.),
-        vec3(0., 0., 0.),
-        1.,
-        0.5,
-        GREEN,
-    ));
+    let mut world = World::default();
+    world.objects.push(Object::default());
 
     loop {
         clear_background(BG_COLOR);
         draw_text(&get_fps().to_string(), 5., 20., 32., WHITE);
 
         world.update(get_frame_time());
-        world.draw_all();
 
         next_frame().await;
     }

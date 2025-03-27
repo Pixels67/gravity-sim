@@ -1,3 +1,5 @@
+use crate::physics::PhysicsHandler;
+use crate::renderer::Renderer;
 use macroquad::prelude::*;
 
 #[derive(PartialEq, Debug)]
@@ -22,15 +24,29 @@ impl Object {
         }
     }
 
-    pub fn new_with_pos(position: Vec3) -> Self {
+    pub fn with_pos(position: Vec3) -> Self {
         Object {
             position,
             ..Default::default()
         }
     }
 
+    pub fn with_id(id: usize) -> Self {
+        Object {
+            id,
+            ..Default::default()
+        }
+    }
+
     pub fn clone_with_id(&self, id: usize) -> Self {
-        Object { id, ..*self }
+        Object {
+            id,
+            position: self.position,
+            velocity: self.velocity,
+            mass: self.mass,
+            radius: self.radius,
+            color: self.color,
+        }
     }
 
     pub fn translate(&mut self, translation: Vec3) -> &mut Self {
@@ -48,41 +64,49 @@ impl Object {
         self
     }
 
-    pub fn draw(&self, material: &Material) {
-        gl_use_material(material);
+    pub fn draw(&self, renderer: &Renderer) {
+        renderer.draw_sphere(self.position, self.radius, Some(self.color));
+        renderer.draw_arrow(self.position, self.position.with_y(0.0), Some(self.color));
+    }
 
-        material.set_uniform("color", self.color);
-        material.set_uniform("world_pos", self.position);
+    pub fn draw_path(
+        &self,
+        objects: &ObjectPool,
+        renderer: &Renderer,
+        physics_handler: &PhysicsHandler,
+        point_count: u32,
+        skip: u32,
+    ) {
+        let mut physics_handler = physics_handler.clone();
 
-        draw_sphere(self.position, self.radius, None, self.color);
+        let mut objects = objects.clone();
+        let mut id = self.id;
+        if objects.get(id).is_none() {
+            id = objects.push(self.clone());
+        }
 
-        gl_use_default_material();
+        let initial_pos = self.position;
+        let mut pos = self.position;
 
-        #[cfg(debug_assertions)]
-        draw_line_3d(self.position, self.position + (self.velocity * 100.), GREEN);
+        for i in 0..point_count {
+            physics_handler.update_objects(&mut objects);
 
-        draw_line_3d(
-            self.position,
-            vec3(self.position.x, 0., self.position.z),
-            Color {
-                r: 1.,
-                g: 1.,
-                b: 1.,
-                a: 0.5,
-            },
-        );
+            let obj = objects.get(id);
 
-        draw_sphere(
-            vec3(self.position.x, 0., self.position.z),
-            0.05,
-            None,
-            Color {
-                r: 1.,
-                g: 1.,
-                b: 1.,
-                a: 0.5,
-            },
-        );
+            if obj.is_none() {
+                draw_sphere(pos, self.radius * 1.01, None, RED);
+                break;
+            }
+
+            if i % skip == 0 {
+                renderer.draw_line(pos, obj.unwrap().position, Some(self.color));
+                pos = obj.unwrap().position;
+            }
+
+            if (pos - initial_pos).length() > 1000.0 {
+                break;
+            }
+        }
     }
 }
 
@@ -136,9 +160,14 @@ impl ObjectPool {
             if self.objects[i].id != id {
                 continue;
             }
+
             self.objects.swap_remove(i);
             return;
         }
+    }
+
+    pub fn get(&self, id: usize) -> Option<&Object> {
+        self.objects.iter().find(|obj| obj.id == id)
     }
 
     pub fn iter(&self) -> impl Iterator<Item = &Object> {
@@ -149,9 +178,9 @@ impl ObjectPool {
         self.objects.iter_mut()
     }
 
-    pub fn draw_all(&self, material: &Material) {
+    pub fn draw_all(&self, renderer: &Renderer) {
         for obj in &self.objects {
-            obj.draw(material);
+            obj.draw(renderer);
         }
     }
 }

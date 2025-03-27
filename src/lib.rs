@@ -1,41 +1,14 @@
+pub mod control;
 pub mod object;
 pub mod physics;
+pub mod renderer;
 pub mod screen;
 pub mod world;
 
 #[cfg(test)]
 mod tests {
-    use crate::physics::*;
-    use macroquad::prelude::*;
-
-    #[test]
-    fn physics_get_grav_force() {
-        assert_eq!(
-            get_grav_force(1., 1., 1., vec3(1., 0., 0.)),
-            vec3(1., 0., 0.)
-        );
-        assert_eq!(
-            get_grav_force(1., 2., 3., vec3(2., 0., 0.)),
-            vec3(1.5, 0., 0.)
-        );
-        assert_eq!(get_grav_force(1., 1., 1., Vec3::ZERO), Vec3::ZERO);
-    }
-
-    #[test]
-    fn physics_get_veloc() {
-        assert_eq!(get_veloc(Vec3::ONE, 1., 1.), Vec3::ONE);
-        assert_eq!(get_veloc(Vec3::ZERO, 1., 1.), Vec3::ZERO);
-        assert_eq!(get_veloc(vec3(1., 0., 2.), 2., 1.), vec3(0.5, 0., 1.));
-    }
-
-    #[test]
-    fn physics_get_displ() {
-        assert_eq!(get_displ(Vec3::ONE, 1., 1.), Vec3::ONE);
-        assert_eq!(get_displ(Vec3::ZERO, 1., 1.), Vec3::ZERO);
-        assert_eq!(get_displ(vec3(1., 0., 2.), 2., 1.), vec3(0.5, 0., 1.));
-    }
-
     use crate::object::*;
+    use macroquad::prelude::*;
 
     #[test]
     fn object_translate() {
@@ -53,21 +26,6 @@ mod tests {
 
         let mut obj = Object::default();
         obj.translate(Vec3::ZERO);
-        assert_eq!(obj.position, Vec3::ZERO);
-    }
-
-    #[test]
-    fn object_new_with_pos() {
-        let obj = Object::new_with_pos(vec3(1., 0., 0.));
-        assert_eq!(obj.position, vec3(1., 0., 0.));
-
-        let obj = Object::new_with_pos(vec3(4., 0., 3.));
-        assert_eq!(obj.position, vec3(4., 0., 3.));
-
-        let obj = Object::new_with_pos(vec3(-2., 0., -1.));
-        assert_eq!(obj.position, vec3(-2., 0., -1.));
-
-        let obj = Object::new_with_pos(Vec3::ZERO);
         assert_eq!(obj.position, Vec3::ZERO);
     }
 
@@ -124,17 +82,17 @@ mod tests {
 
     #[test]
     fn raycast() {
-        let ray = Ray::new(vec3(0., 0., 0.), vec3(1., 0., 0.), 10.);
+        let ray = Ray::new(vec3(0., 0., 0.), vec3(1., 0., 0.));
         let pos = vec3(5., 0., 0.);
 
         assert!(ray.raycast(pos, 0.));
 
-        let ray = Ray::new(vec3(0., 0., 0.), vec3(1., 0., 0.), 10.);
+        let ray = Ray::new(vec3(0., 0., 0.), vec3(1., 0., 0.));
         let pos = vec3(5., 1., 0.);
 
         assert!(ray.raycast(pos, 1.));
 
-        let ray = Ray::new(vec3(0., 0., 0.), vec3(1., 0., 0.), 10.);
+        let ray = Ray::new(vec3(0., 0., 0.), vec3(1., 0., 0.));
         let pos = vec3(5., 2., 0.);
 
         assert!(!ray.raycast(pos, 1.));
