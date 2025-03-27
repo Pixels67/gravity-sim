@@ -43,7 +43,22 @@ impl Renderer {
     pub fn begin_drawing(&self) {
         set_camera(&self.cam);
 
-        draw_grid(1000, 5.0, WHITE, GRAY);
+        draw_grid(
+            1_000,
+            5.,
+            Color {
+                r: 0.8,
+                g: 1.,
+                b: 1.,
+                a: 0.2,
+            },
+            Color {
+                r: 0.5,
+                g: 1.,
+                b: 1.,
+                a: 0.1,
+            },
+        );
     }
 
     pub fn end_drawing(&self) {

@@ -34,13 +34,18 @@ impl ControlHandler {
         self.handle_ghost_obj(dt);
 
         self.control_state = match self.control_state {
-            ControlState::Idle => self.handle_idle(renderer, objects),
+            ControlState::Idle => self.handle_idle(renderer, physics_handler, objects),
             ControlState::Place => self.handle_place(renderer),
             ControlState::Drag => self.handle_drag(renderer, physics_handler, objects),
         };
     }
 
-    fn handle_idle(&mut self, renderer: &mut Renderer, objects: &mut ObjectPool) -> ControlState {
+    fn handle_idle(
+        &mut self,
+        renderer: &mut Renderer,
+        physics_handler: &PhysicsHandler,
+        objects: &mut ObjectPool,
+    ) -> ControlState {
         if let Some(obj) = self.get_hovered_obj(renderer, objects) {
             let color = Color {
                 a: 0.2,
@@ -48,6 +53,7 @@ impl ControlHandler {
             };
 
             renderer.draw_halo(obj.position, obj.radius * 1.1, Some(color));
+            obj.draw_path(objects, renderer, physics_handler, 5000, 10);
         }
 
         if is_key_released(KeyCode::R) {
@@ -153,7 +159,7 @@ impl ControlHandler {
                 obj.mass += self.scale_speed * dt;
                 obj.radius += self.scale_speed * dt;
             }
-            if is_key_down(KeyCode::Down) {
+            if is_key_down(KeyCode::Down) && obj.mass > 0.3 {
                 obj.mass -= self.scale_speed * dt;
                 obj.radius -= self.scale_speed * dt;
             }
