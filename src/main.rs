@@ -2,6 +2,7 @@ use gravity_sim::object::Object;
 use gravity_sim::world::World;
 use macroquad::audio::{load_sound, play_sound, PlaySoundParams};
 use macroquad::prelude::*;
+use std::env;
 
 const WINDOW_TITLE: &str = "Gravity Sim";
 const WINDOW_WIDTH: i32 = 1280;
@@ -19,9 +20,17 @@ const BG_COLOR: Color = Color {
 async fn main() {
     let mut world = World::default();
     world.objects.push(Object::default());
-    let st = load_sound("res/music/music.ogg")
-        .await
-        .expect("Failed to load audio file");
+    let st = load_sound(
+        env::current_exe()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .join("res/music/music.ogg")
+            .to_str()
+            .unwrap(),
+    )
+    .await
+    .expect("Failed to load audio file");
 
     play_sound(
         &st,
