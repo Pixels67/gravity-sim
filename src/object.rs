@@ -23,9 +23,10 @@ impl Object {
     }
 
     pub fn new_with_pos(position: Vec3) -> Self {
-        let mut obj = Object::default();
-        obj.position = position;
-        obj
+        Object {
+            position,
+            ..Default::default()
+        }
     }
 
     pub fn clone_with_id(&self, id: usize) -> Self {
@@ -48,7 +49,7 @@ impl Object {
     }
 
     pub fn draw(&self, material: &Material) {
-        gl_use_material(&material);
+        gl_use_material(material);
 
         material.set_uniform("color", self.color);
         material.set_uniform("world_pos", self.position);
@@ -106,6 +107,7 @@ impl Clone for Object {
     }
 }
 
+#[derive(Default)]
 pub struct ObjectPool {
     objects: Vec<Object>,
     current_id: usize,

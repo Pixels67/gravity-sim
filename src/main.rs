@@ -8,7 +8,7 @@ const WINDOW_HEIGHT: i32 = 720;
 const AA_SAMPLE_COUNT: i32 = 8;
 
 const GRAV_CONST: f32 = 0.5;
-const UPDATE_INTERVAL: f32 = 0.001;
+const UPDATE_INTERVAL: f32 = 0.01;
 const BG_COLOR: Color = Color {
     r: 0.06,
     g: 0.08,
@@ -21,27 +21,11 @@ async fn main() {
     let mut world = World::new(GRAV_CONST, UPDATE_INTERVAL);
 
     world.add_object(Object::new(
-        vec3(5., 0., 0.),
-        vec3(0., 0., 0.01),
-        1.,
-        0.5,
-        RED,
-    ));
-
-    world.add_object(Object::new(
         vec3(0., 0., 0.),
         vec3(0., 0., 0.),
         1.,
         0.5,
         GREEN,
-    ));
-
-    world.add_object(Object::new(
-        vec3(-5., 0., 0.),
-        vec3(0., 0., -0.01),
-        1.,
-        0.5,
-        BLUE,
     ));
 
     loop {
