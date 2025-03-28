@@ -13,7 +13,11 @@ cd gravity-sim
 cargo build --release
 ```
 
-***Note***: To get debug lines build without `--release`
+***Note***: To get debug lines build without `--release` \
+***Note***: On Linux you need to install `libasound2-dev` to build the project, on Debian-Based distros run the following command:
+```sh
+sudo apt-get install libasound2-dev
+```
 
 ## Controls
 
