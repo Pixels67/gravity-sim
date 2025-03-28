@@ -20,6 +20,36 @@ const BG_COLOR: Color = Color {
 async fn main() {
     let mut world = World::default();
     world.objects.push(Object::default());
+
+    play_music().await;
+
+    loop {
+        clear_background(BG_COLOR);
+
+        world.update(get_frame_time());
+        draw_text(&get_fps().to_string(), 5., 20., 32., WHITE);
+
+        next_frame().await;
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+async fn play_music() {
+    let st = load_sound("res/music/music.ogg")
+        .await
+        .expect("Failed to load audio file");
+
+    play_sound(
+        &st,
+        PlaySoundParams {
+            looped: true,
+            volume: 0.35,
+        },
+    );
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+async fn play_music() {
     let st = load_sound(
         env::current_exe()
             .unwrap()
@@ -39,15 +69,6 @@ async fn main() {
             volume: 0.35,
         },
     );
-
-    loop {
-        clear_background(BG_COLOR);
-
-        world.update(get_frame_time());
-        draw_text(&get_fps().to_string(), 5., 20., 32., WHITE);
-
-        next_frame().await;
-    }
 }
 
 fn config() -> Conf {
