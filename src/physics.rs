@@ -45,13 +45,11 @@ impl PhysicsHandler {
     }
 
     pub fn handle_collisions(&mut self, objects: &mut ObjectPool, object: &mut Object) {
-        for other in objects.clone().iter_mut() {
+        for other in objects
+            .get_all_in_area(object.position, object.radius)
+            .iter_mut()
+        {
             if object.id == other.id {
-                continue;
-            }
-
-            let dist = other.position - object.position;
-            if dist.length() >= object.radius + other.radius {
                 continue;
             }
 

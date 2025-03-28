@@ -1,6 +1,7 @@
 use crate::physics::PhysicsHandler;
 use crate::renderer::Renderer;
 use macroquad::prelude::*;
+use std::collections::HashMap;
 
 #[derive(PartialEq, Debug)]
 pub struct Object {
@@ -69,14 +70,13 @@ impl Object {
         renderer.draw_arrow(self.position, self.position.with_y(0.0), Some(self.color));
     }
 
-    pub fn draw_path(
+    pub fn calculate_trajectory(
         &self,
         objects: &ObjectPool,
-        renderer: &Renderer,
         physics_handler: &PhysicsHandler,
         point_count: u32,
         skip: u32,
-    ) {
+    ) -> Trajectory {
         let mut physics_handler = physics_handler.clone();
 
         let mut objects = objects.clone();
@@ -85,8 +85,7 @@ impl Object {
             id = objects.push(self.clone());
         }
 
-        let initial_pos = self.position;
-        let mut pos = self.position;
+        let mut trajectory = Trajectory::new();
 
         for i in 0..point_count {
             physics_handler.update_objects(&mut objects);
@@ -94,19 +93,22 @@ impl Object {
             let obj = objects.get(id);
 
             if obj.is_none() {
-                draw_sphere(pos, self.radius * 1.01, None, RED);
-                break;
+                trajectory.end();
+                return trajectory;
             }
+
+            let obj = obj.unwrap().clone();
 
             if i % skip == 0 {
-                renderer.draw_line(pos, obj.unwrap().position, Some(self.color));
-                pos = obj.unwrap().position;
+                trajectory.push(obj.position);
             }
 
-            if (pos - initial_pos).length() > 1000.0 {
-                break;
+            if (trajectory.first().cloned().unwrap() - obj.position).length() > 1000.0 {
+                return trajectory;
             }
         }
+
+        trajectory
     }
 }
 
@@ -170,12 +172,65 @@ impl ObjectPool {
         self.objects.iter().find(|obj| obj.id == id)
     }
 
+    pub fn get_all_in_area(&self, pos: Vec3, radius: f32) -> ObjectPool {
+        ObjectPool {
+            objects: self
+                .objects
+                .iter()
+                .filter(|obj| (obj.position - pos).length() - obj.radius <= radius)
+                .cloned()
+                .collect(),
+            current_id: self.current_id,
+        }
+    }
+
     pub fn iter(&self) -> impl Iterator<Item = &Object> {
         self.objects.iter()
     }
 
     pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut Object> {
         self.objects.iter_mut()
+    }
+
+    pub fn calculate_trajectories(
+        &self,
+        physics_handler: &PhysicsHandler,
+        point_count: u32,
+        skip: u32,
+    ) -> HashMap<usize, Trajectory> {
+        let mut trajectories = HashMap::new();
+
+        for obj in &self.objects {
+            trajectories.insert(
+                obj.id,
+                obj.calculate_trajectory(self, physics_handler, point_count, skip),
+            );
+        }
+
+        trajectories
+    }
+
+    pub fn calculate_trajectories_except(
+        &self,
+        id: usize,
+        physics_handler: &PhysicsHandler,
+        point_count: u32,
+        skip: u32,
+    ) -> HashMap<usize, Trajectory> {
+        let mut trajectories = HashMap::new();
+
+        for obj in &self.objects {
+            if obj.id == id {
+                continue;
+            }
+
+            trajectories.insert(
+                obj.id,
+                obj.calculate_trajectory(self, physics_handler, point_count, skip),
+            );
+        }
+
+        trajectories
     }
 
     pub fn draw_all(&self, renderer: &Renderer) {
@@ -195,6 +250,58 @@ impl Clone for ObjectPool {
         ObjectPool {
             objects: vec,
             current_id: self.current_id,
+        }
+    }
+}
+
+pub struct Trajectory {
+    points: Vec<Vec3>,
+    has_end: bool,
+}
+
+impl Trajectory {
+    pub fn new() -> Self {
+        Trajectory {
+            points: Vec::new(),
+            has_end: false,
+        }
+    }
+
+    pub fn push(&mut self, point: Vec3) {
+        self.points.push(point);
+    }
+
+    pub fn end(&mut self) {
+        self.has_end = true;
+    }
+
+    pub fn len(&self) -> usize {
+        self.points.len()
+    }
+
+    pub fn first(&self) -> Option<&Vec3> {
+        self.points.first()
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = &Vec3> {
+        self.points.iter()
+    }
+
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut Vec3> {
+        self.points.iter_mut()
+    }
+
+    pub fn draw(&self, renderer: &Renderer, color: Option<Color>, end_sphere_radius: f32) {
+        for (i, point) in self.points.iter().enumerate() {
+            if i == 0 {
+                continue;
+            }
+
+            renderer.draw_line(self.points[i - 1], *point, color);
+
+            if i == self.points.len() - 1 && self.has_end {
+                renderer.draw_halo(*point, end_sphere_radius, Some(RED));
+            }
         }
     }
 }

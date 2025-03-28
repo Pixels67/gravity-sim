@@ -1,25 +1,32 @@
-use crate::object::{Object, ObjectPool};
+use crate::object::{Object, ObjectPool, Trajectory};
 use crate::physics::PhysicsHandler;
 use crate::renderer::Renderer;
 use crate::screen::*;
 use macroquad::prelude::*;
+use std::collections::HashMap;
 
 pub struct ControlHandler {
     move_speed: f32,
     scale_speed: f32,
     place_elevation: f32,
+    traj_update_interval: u64,
     control_state: ControlState,
     ghost_obj: Option<Object>,
+    traj_update_counter: u64,
+    trajectories: HashMap<usize, Trajectory>,
 }
 
 impl ControlHandler {
-    fn new(move_speed: f32, scale_speed: f32) -> Self {
+    fn new(move_speed: f32, scale_speed: f32, traj_update_interval: u64) -> Self {
         ControlHandler {
             move_speed,
             scale_speed,
+            traj_update_interval,
             place_elevation: 0.0,
             control_state: ControlState::Idle,
             ghost_obj: None,
+            traj_update_counter: 0,
+            trajectories: HashMap::new(),
         }
     }
 
@@ -53,7 +60,8 @@ impl ControlHandler {
             };
 
             renderer.draw_halo(obj.position, obj.radius * 1.1, Some(color));
-            obj.draw_path(objects, renderer, physics_handler, 5000, 10);
+            let traj = obj.calculate_trajectory(objects, physics_handler, 10_000, 10);
+            traj.draw(renderer, Some(obj.color), obj.radius);
         }
 
         if is_key_released(KeyCode::R) {
@@ -108,25 +116,43 @@ impl ControlHandler {
         let ray = Ray::new_from_mouse(renderer.get_cam());
 
         if let Some(obj) = &mut self.ghost_obj {
+            let veloc = (ray.plane_intersect(Some(self.place_elevation)) - obj.position) / 100.0;
+
+            let mut virtual_obj: Object = obj.clone();
+            virtual_obj.add_velocity(veloc);
+
             renderer.draw_arrow(
                 obj.position,
                 ray.plane_intersect(Some(self.place_elevation)),
                 Some(obj.color),
             );
 
-            let veloc = (ray.plane_intersect(Some(self.place_elevation)) - obj.position) / 100.0;
-
-            let virtual_obj: Object = obj.clone().add_velocity(veloc).clone();
-            virtual_obj.draw_path(objects, renderer, physics_handler, 5000, 10);
-
-            // let mut clones = objects.clone();
-            // clones.push(virtual_obj.clone());
-
-            // for obj in clones.iter() {
-            //     obj.draw_path(&clones, renderer, physics_handler, 5000, 10);
-            // }
-
             obj.draw(renderer);
+            let traj = virtual_obj.calculate_trajectory(objects, physics_handler, 10_000, 20);
+            traj.draw(renderer, Some(obj.color), obj.radius);
+
+            let mut clones = objects.get_all_in_area(obj.position, 100.0);
+            let id = clones.push(virtual_obj.clone());
+
+            for (id, traj) in &self.trajectories {
+                let obj = match clones.get(*id) {
+                    Some(obj) => obj,
+                    None => continue,
+                };
+
+                traj.draw(renderer, Some(obj.color), obj.radius);
+            }
+
+            if self.traj_update_counter % self.traj_update_interval == 0 {
+                self.trajectories =
+                    clones.calculate_trajectories_except(id, physics_handler, 5_000, 20);
+            }
+
+            self.traj_update_counter += 1;
+
+            if self.traj_update_counter == (2u128.pow(64) - 1) as u64 {
+                self.traj_update_counter = 0;
+            }
         }
 
         if is_mouse_button_released(MouseButton::Left) {
@@ -223,7 +249,7 @@ impl ControlHandler {
 
 impl Default for ControlHandler {
     fn default() -> Self {
-        ControlHandler::new(20.0, 5.0)
+        ControlHandler::new(20.0, 5.0, 5)
     }
 }
 

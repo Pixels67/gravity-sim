@@ -42,9 +42,9 @@ async fn main() {
 
     loop {
         clear_background(BG_COLOR);
-        draw_text(&get_fps().to_string(), 5., 20., 32., WHITE);
 
         world.update(get_frame_time());
+        draw_text(&get_fps().to_string(), 5., 20., 32., WHITE);
 
         next_frame().await;
     }
