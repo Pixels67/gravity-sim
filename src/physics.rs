@@ -20,31 +20,30 @@ impl PhysicsHandler {
     pub fn update(&mut self, objects: &mut ObjectPool, dt: f32) {
         self.accumulator += dt;
         while self.accumulator > self.timestep {
-            self.update_objects(objects);
-
+            self.update_objects(objects, self.timestep);
             self.accumulator -= self.timestep;
         }
     }
 
-    pub fn update_objects(&mut self, mut objects: &mut ObjectPool) {
+    pub fn update_objects(&self, objects: &mut ObjectPool, time: f32) {
         let mut clone = objects.clone();
 
         for obj in clone.iter_mut() {
-            obj.velocity += self.get_obj_veloc(obj, objects);
+            obj.add_velocity(self.get_obj_veloc(obj, objects, time));
         }
 
         for obj in clone.iter_mut() {
-            obj.update_pos();
+            obj.update_pos(time);
+        }
+
+        for obj in objects.iter_mut() {
+            self.handle_collisions(&mut clone, obj);
         }
 
         *objects = clone;
-
-        for obj in objects.clone().iter_mut() {
-            self.handle_collisions(&mut objects, obj);
-        }
     }
 
-    pub fn handle_collisions(&mut self, objects: &mut ObjectPool, object: &mut Object) {
+    pub fn handle_collisions(&self, objects: &mut ObjectPool, object: &mut Object) {
         for other in objects
             .get_all_in_area(object.position, object.radius)
             .iter_mut()
@@ -84,14 +83,24 @@ impl PhysicsHandler {
         }
     }
 
-    pub fn get_obj_veloc(&self, object: &Object, objects: &ObjectPool) -> Vec3 {
-        let mut force = Vec3::ZERO;
+    pub fn get_obj_veloc(&self, object: &Object, objects: &ObjectPool, time: f32) -> Vec3 {
+        let mut veloc = Vec3::ZERO;
 
         for other in objects.iter() {
-            force += self.get_grav_force(object.mass, other.mass, other.position - object.position);
+            veloc += self.get_grav_veloc(other.mass, other.position - object.position, time);
         }
 
-        Self::get_veloc(force, object.mass, self.timestep)
+        veloc
+    }
+
+    pub fn get_grav_veloc(&self, m2: f32, dist: Vec3, time: f32) -> Vec3 {
+        if dist.length_squared() == 0. {
+            return Vec3::ZERO;
+        }
+
+        let veloc = self.grav_const * m2 / dist.length_squared() * time;
+        let dir = dist.normalize();
+        dir * veloc
     }
 
     pub fn get_grav_force(&self, m1: f32, m2: f32, dist: Vec3) -> Vec3 {
@@ -138,7 +147,7 @@ impl Default for PhysicsHandler {
     fn default() -> PhysicsHandler {
         PhysicsHandler {
             grav_const: 1.0,
-            timestep: 0.01,
+            timestep: 0.2,
             accumulator: 0.,
         }
     }

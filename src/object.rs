@@ -60,8 +60,8 @@ impl Object {
         self
     }
 
-    pub fn update_pos(&mut self) -> &mut Self {
-        self.position += self.velocity;
+    pub fn update_pos(&mut self, time: f32) -> &mut Self {
+        self.position += self.velocity * time;
         self
     }
 
@@ -75,10 +75,8 @@ impl Object {
         objects: &ObjectPool,
         physics_handler: &PhysicsHandler,
         point_count: u32,
-        skip: u32,
+        step: u32,
     ) -> Trajectory {
-        let mut physics_handler = physics_handler.clone();
-
         let mut objects = objects.clone();
         let mut id = self.id;
         if objects.get(id).is_none() {
@@ -87,8 +85,13 @@ impl Object {
 
         let mut trajectory = Trajectory::new();
 
-        for i in 0..point_count {
-            physics_handler.update_objects(&mut objects);
+        for i in 0..point_count * step {
+            let time = physics_handler.get_timestep();
+            physics_handler.update_objects(&mut objects, time);
+
+            if i % step != 0 {
+                continue;
+            }
 
             let obj = objects.get(id);
 
@@ -98,14 +101,7 @@ impl Object {
             }
 
             let obj = obj.unwrap().clone();
-
-            if i % skip == 0 {
-                trajectory.push(obj.position);
-            }
-
-            if (trajectory.first().cloned().unwrap() - obj.position).length() > 1000.0 {
-                return trajectory;
-            }
+            trajectory.push(obj.position);
         }
 
         trajectory
@@ -196,47 +192,55 @@ impl ObjectPool {
         &self,
         physics_handler: &PhysicsHandler,
         point_count: u32,
-        skip: u32,
+        step: u32,
     ) -> HashMap<usize, Trajectory> {
-        let mut trajectories = HashMap::new();
+        let mut ids: Vec<usize> = Vec::new();
+        let mut objects = self.clone();
+        let mut trajectories: HashMap<usize, Trajectory> = HashMap::new();
 
-        for obj in &self.objects {
-            trajectories.insert(
-                obj.id,
-                obj.calculate_trajectory(self, physics_handler, point_count, skip),
-            );
+        for obj in objects.iter_mut() {
+            ids.push(obj.id);
         }
 
-        trajectories
-    }
+        for i in 0..point_count * step {
+            let time = physics_handler.get_timestep();
+            physics_handler.update_objects(&mut objects, time);
 
-    pub fn calculate_trajectories_except(
-        &self,
-        id: usize,
-        physics_handler: &PhysicsHandler,
-        point_count: u32,
-        skip: u32,
-    ) -> HashMap<usize, Trajectory> {
-        let mut trajectories = HashMap::new();
-
-        for obj in &self.objects {
-            if obj.id == id {
+            if i % step != 0 {
                 continue;
             }
 
-            trajectories.insert(
-                obj.id,
-                obj.calculate_trajectory(self, physics_handler, point_count, skip),
-            );
+            for id in ids.clone().iter() {
+                if objects.iter().find(|o| o.id == *id).is_some() {
+                    continue;
+                }
+
+                if let Some(traj) = trajectories.get_mut(id) {
+                    traj.end();
+                }
+
+                ids.remove(ids.iter().position(|id| *id == *id).unwrap());
+            }
+
+            for obj in objects.iter_mut() {
+                if i % step != 0 {
+                    continue;
+                }
+
+                trajectories
+                    .entry(obj.id)
+                    .or_insert(Trajectory::new())
+                    .push(obj.position);
+            }
         }
 
         trajectories
     }
 
     pub fn draw_all(&self, renderer: &Renderer) {
-        for obj in &self.objects {
+        self.iter().for_each(|obj| {
             obj.draw(renderer);
-        }
+        });
     }
 }
 
@@ -254,6 +258,7 @@ impl Clone for ObjectPool {
     }
 }
 
+#[derive(Clone)]
 pub struct Trajectory {
     points: Vec<Vec3>,
     has_end: bool,
@@ -267,12 +272,14 @@ impl Trajectory {
         }
     }
 
-    pub fn push(&mut self, point: Vec3) {
+    pub fn push(&mut self, point: Vec3) -> &mut Trajectory {
         self.points.push(point);
+        self
     }
 
-    pub fn end(&mut self) {
+    pub fn end(&mut self) -> &mut Trajectory {
         self.has_end = true;
+        self
     }
 
     pub fn len(&self) -> usize {

@@ -3,6 +3,8 @@ use crate::object::*;
 use crate::physics::*;
 use crate::renderer::*;
 
+pub const SIM_SPEED: f32 = 20.0;
+
 pub struct World {
     pub objects: ObjectPool,
     pub physics_handler: PhysicsHandler,
@@ -28,7 +30,8 @@ impl World {
     pub fn update(&mut self, dt: f32) {
         self.renderer.begin_drawing();
 
-        self.physics_handler.update(&mut self.objects, dt);
+        self.physics_handler
+            .update(&mut self.objects, dt * SIM_SPEED);
         self.objects.draw_all(&self.renderer);
         self.input_handler.handle_input(
             &mut self.renderer,
