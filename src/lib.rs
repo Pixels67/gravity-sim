@@ -60,13 +60,13 @@ mod tests {
     fn object_update_pos() {
         let mut obj = Object::default();
         obj.add_velocity(vec3(1., 0., 0.));
-        obj.update_pos();
+        obj.update_pos(1.0);
         assert_eq!(obj.position, vec3(1., 0., 0.));
 
         let mut obj = Object::default();
         obj.add_velocity(vec3(1., 2., 0.));
         obj.add_velocity(vec3(-3., 2., -1.));
-        obj.update_pos();
+        obj.update_pos(1.0);
         assert_eq!(obj.position, vec3(-2., 4., -1.));
     }
 
